@@ -34,6 +34,8 @@ def gen_tflite():
     tflite_model = converter.convert()
     open("face320x320.tflite", "wb").write(tflite_model)
 
+def export_from_session():
+    pass
 # def gen_tflite_toco():
 #     cmds = [
 #         'bazel',
