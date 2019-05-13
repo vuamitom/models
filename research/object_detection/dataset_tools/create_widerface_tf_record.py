@@ -1,24 +1,34 @@
-import logging
+import os
+import sys
+import io
+import hashlib
+# import logging
 import tensorflow as tf
 import PIL
 import numpy as np
+from object_detection.utils import label_map_util
+from object_detection.dataset_tools import tf_record_creation_util
+from object_detection.utils import dataset_util
+import contextlib2
 
 flags = tf.app.flags
-flags.DEFINE_string('data_dir', '', 'Root directory to raw pet dataset.')
+flags.DEFINE_string('data_dir', '', 'Root directory to raw face dataset.')
 flags.DEFINE_string('output_dir', '', 'Path to directory to output TFRecords.')
-flags.DEFINE_string('label_map_path', 'data/pet_label_map.pbtxt',
+flags.DEFINE_string('label_map_path', 'data/face_label_map.pbtxt',
                     'Path to label map proto')
-flags.DEFINE_integer('num_shards', 10, 'Number of TFRecord shards')
+# flags.DEFINE_integer('num_shards', 50, 'Number of TFRecord shards')
 
 FLAGS = flags.FLAGS
+# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 def create_single_tf_example(faces, img_name, label_map_dict, base_dir):
     img_path = os.path.join(base_dir, img_name)
+    # print ('">>', img_path, '<<"')
     with tf.gfile.GFile(img_path, 'rb') as fid:
         encoded_jpg = fid.read()
     encoded_jpg_io = io.BytesIO(encoded_jpg)
     image = PIL.Image.open(encoded_jpg_io)
-    if image.format not == 'JPEG':
+    if not image.format == 'JPEG':
         raise ValueError('Image format not JPEG')
     key = hashlib.sha256(encoded_jpg).hexdigest()
 
@@ -32,15 +42,19 @@ def create_single_tf_example(faces, img_name, label_map_dict, base_dir):
     ymaxs = []
     classes = []
     classes_text = []
+    # print ('faces ', faces)
     for obj in faces:
         x, y, w, h = obj[0], obj[1], obj[2], obj[3]
-        xmins.append(float(x) / width)
-        xmaxs.append((float(x) + w) / width)
-        ymins.append(float(y) / height)
-        ymaxs.append((float(y) + h) / height)
-        classes_text.append('face')
-        classes.append(label_map_dict['face'])
-
+        blur, invalid = obj[4], obj[7]
+        if (not invalid == 1) and w > 30 and h > 30:
+            xmins.append(max(0.005, float(x) / width))
+            xmaxs.append(min(0.995, (float(x) + w) / width))
+            ymins.append(max(0.005, float(y) / height))
+            ymaxs.append(min(0.995, (float(y) + h) / height))
+            classes_text.append('face'.encode('utf8'))
+            classes.append(label_map_dict['face'])
+    if len(classes) == 0:
+        return None
 
     feature_dict = {
         'image/height': dataset_util.int64_feature(height),
@@ -70,45 +84,64 @@ def create_tf_record(output_filename, txt_path,
                     label_map_dict,
                     image_dir):
     objects, imgs = [], []
+    valid_imgs = 0
     with open(txt_path, 'r') as f:
-        imgs.append(f.readline())
-        n_obj = int(f.readline())
-        objects.append([(int(t) for t in f.readline().split(' '))
-                            for o in range(0, n_obj)])
-
+        line = f.readline()
+        while line:
+            imgs.append(line.strip(' \n'))
+            n_obj = int(f.readline().strip(' \n'))
+            # print('read n_obj', n_obj)
+            if n_obj == 0:
+                n_obj = 1
+            faces = [[int(t) for t in f.readline().strip(' \n').split(' ')]
+                        for o in range(0, n_obj)]
+            objects.append(faces)
+            line = f.readline()            
+    print('about to prepare', len(imgs), ' records')
     with contextlib2.ExitStack() as tf_record_close_stack:
         output_tfrecords = tf_record_creation_util.open_sharded_output_tfrecords(
         tf_record_close_stack, output_filename, num_shards)
         for idx, img_path in enumerate(imgs):
             if idx % 100 == 0:
-                logging.info('On image %d of %d', idx, len(imgs))
-            try:
+                print('On image', idx, 'of',len(imgs))
+            try:                
                 tf_example = create_single_tf_example(objects[idx], img_path, 
                                                         label_map_dict, image_dir)
                 if tf_example:
                     shard_idx = idx % num_shards
                     output_tfrecords[shard_idx].write(tf_example.SerializeToString())
+                    valid_imgs += 1
+                
             except ValueError:
-                logging.warning('Invalid example: %s, ignored', img_path)    
+                print('Invalid example: %s, ignored', img_path)    
+    print ('no. valid images = ', valid_imgs)
 
 
 def main(_):
-    logging.info('Reading from WILDER face dataset.')
-    label_map_dict = dict(0='background', 1='face')
+    data_dir = FLAGS.data_dir
+    
+    train_output_path = os.path.join(FLAGS.output_dir, 'wider_faces_train.record')
+    val_output_path = os.path.join(FLAGS.output_dir, 'wider_faces_val.record')
+    train_image_dir = os.path.join(data_dir, 'WIDER_train', 'images')
+    val_image_dir = os.path.join(data_dir, 'WIDER_val', 'images')
+    train_image_txt = os.path.join(data_dir, 'wider_face_split', 'wider_face_train_bbx_gt.txt')
+    val_image_txt = os.path.join(data_dir, 'wider_face_split', 'wider_face_val_bbx_gt.txt')
+    print('Reading from WILDER face dataset.')
+    label_map_dict = label_map_util.get_label_map_dict(FLAGS.label_map_path)
     # create train set
     create_tf_record(
-        '',
-        '',
-        FLAGS.num_shards,
+        train_output_path,
+        train_image_txt,
+        100,
         label_map_dict,
-        '')
+        train_image_dir)
     # create validation set
     create_tf_record(
-        '',
-        '',
-        FLAGS.num_shards,
+        val_output_path,
+        val_image_txt,
+        10,
         label_map_dict,
-        '')
+        val_image_dir)
 
 if __name__ == '__main__':
     tf.app.run()
