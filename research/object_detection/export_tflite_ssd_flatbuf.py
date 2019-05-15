@@ -45,8 +45,8 @@ def export_from_session():
 #     subprocess.call(cmds, cwd=tensorflow_dir)
 
 if __name__ == '__main__':
-    crop_size = 112
-    regen_frozen_graph('/home/tamvm/Projects/tensorflow-models/research/object_detection/wider_face_models/ssd112',
-                        pipeline='ssd_mobilenet_v2_quantized_112x112_widerface.config',
-                        ckpt='model.ckpt-18970')
+    crop_size = 224
+    regen_frozen_graph('/home/tamvm/Projects/tensorflow-models/research/object_detection/wider_face_models/ssdlite224',
+                        pipeline='ssdlite_mobilenet_v2_quantized_224x224_widerface.config',
+                        ckpt='model.ckpt-50000')
     gen_tflite(crop_size)
