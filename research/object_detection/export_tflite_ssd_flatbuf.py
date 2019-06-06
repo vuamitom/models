@@ -11,7 +11,8 @@ def regen_frozen_graph(checkpoint_dir, pipeline='pipeline.config', ckpt='model.c
         '--pipeline_config_path=' + config_file,
         '--trained_checkpoint_prefix=' + ckpt_path,
         '--output_directory=.',
-        '--add_postprocessing_op=true'
+        '--add_postprocessing_op=true',
+        '--max_detections=10'
     ]
     subprocess.call(cmds)
 
@@ -31,6 +32,7 @@ def gen_tflite(crop_size):
     converter.allow_custom_ops = True
     converter.quantized_input_stats = {}
     converter.quantized_input_stats[input_arrays[0]] = (128, 128) # (mean, std)
+    # converter.post_training_quantize = True
     tflite_model = converter.convert()
     open('face' + str(crop_size) + 'x' + str(crop_size) + '.tflite', "wb").write(tflite_model)
 
@@ -45,8 +47,8 @@ def export_from_session():
 #     subprocess.call(cmds, cwd=tensorflow_dir)
 
 if __name__ == '__main__':
-    crop_size = 224
-    regen_frozen_graph('/home/tamvm/Projects/tensorflow-models/research/object_detection/wider_face_models/ssdlite224',
-                        pipeline='ssdlite_mobilenet_v2_quantized_224x224_widerface.config',
-                        ckpt='model.ckpt-50000')
+    crop_size = 48
+    regen_frozen_graph('/home/tamvm/Projects/tensorflow-models/research/object_detection/wider_face_models/ssdlite48_3anchors',
+                        pipeline='ssdlite_mobilenet_v2_quantized_48x48_3anchors_widerface.config',
+                        ckpt='models_ssdlite48_3anchors_model.ckpt-542296')
     gen_tflite(crop_size)

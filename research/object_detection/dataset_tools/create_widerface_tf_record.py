@@ -46,7 +46,7 @@ def create_single_tf_example(faces, img_name, label_map_dict, base_dir):
     for obj in faces:
         x, y, w, h = obj[0], obj[1], obj[2], obj[3]
         blur, invalid = obj[4], obj[7]
-        if (not invalid == 1) and w > 30 and h > 30:
+        if (not invalid == 1) and w >= 50 and h >= 50:
             xmins.append(max(0.005, float(x) / width))
             xmaxs.append(min(0.995, (float(x) + w) / width))
             ymins.append(max(0.005, float(y) / height))
@@ -85,6 +85,7 @@ def create_tf_record(output_filename, txt_path,
                     image_dir):
     objects, imgs = [], []
     valid_imgs = 0
+    max_faces = 0
     with open(txt_path, 'r') as f:
         line = f.readline()
         while line:
@@ -93,11 +94,18 @@ def create_tf_record(output_filename, txt_path,
             # print('read n_obj', n_obj)
             if n_obj == 0:
                 n_obj = 1
+            # 
             faces = [[int(t) for t in f.readline().strip(' \n').split(' ')]
                         for o in range(0, n_obj)]
+            # valid_count = sum([1 for f in faces if f[2]>=50 and f[3]>=50])
+            # max_faces = valid_count if valid_count > max_faces else max_faces
             objects.append(faces)
             line = f.readline()            
     print('about to prepare', len(imgs), ' records')
+    # if True:
+    #     print ('max faces = ', max_faces)
+    #     return
+
     with contextlib2.ExitStack() as tf_record_close_stack:
         output_tfrecords = tf_record_creation_util.open_sharded_output_tfrecords(
         tf_record_close_stack, output_filename, num_shards)

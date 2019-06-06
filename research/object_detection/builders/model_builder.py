@@ -54,6 +54,7 @@ from object_detection.predictors import rfcn_box_predictor
 from object_detection.predictors.heads import mask_head
 from object_detection.protos import model_pb2
 from object_detection.utils import ops
+from object_detection.models.ssd_mobilenet_v2_layer5_feature_extractor import SSDMobileNetV2Layer5FeatureExtractor
 
 # A map of names to SSD feature extractors.
 SSD_FEATURE_EXTRACTOR_CLASS_MAP = {
@@ -74,6 +75,7 @@ SSD_FEATURE_EXTRACTOR_CLASS_MAP = {
         ssd_resnet_v1_ppn.SSDResnet152V1PpnFeatureExtractor,
     'embedded_ssd_mobilenet_v1': EmbeddedSSDMobileNetV1FeatureExtractor,
     'ssd_pnasnet': SSDPNASNetFeatureExtractor,
+    'ssd_mobilenet_v2_layer5': SSDMobileNetV2Layer5FeatureExtractor
 }
 
 SSD_KERAS_FEATURE_EXTRACTOR_CLASS_MAP = {

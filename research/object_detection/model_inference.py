@@ -83,7 +83,7 @@ def run_inference_for_single_image(image):
 def tflite_run_inference_for_single_image(image):
     # Load TFLite model and allocate tensors.
     # model_path = '/home/tamvm/AndroidStudioProjects/MLKitDemo/app/src/main/assets/detect_face_224_quantized.tflite'
-    model_path = '/home/tamvm/Projects/tensorflow-models/research/object_detection/face224x224.tflite'
+    model_path = '/home/tamvm/Projects/tensorflow-models/research/object_detection/face112x112.tflite'
     interpreter = tf.lite.Interpreter(model_path=model_path)
     interpreter.allocate_tensors()
 
@@ -128,7 +128,9 @@ category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABE
 
 PATH_TO_TEST_IMAGES_DIR = './WIDER_train/images/0--Parade'
 # TEST_IMAGE_PATHS = [os.path.join(PATH_TO_TEST_IMAGES_DIR, '0_Parade_Parade_0_{}.jpg'.format(i)) for i in [924, 950]]
-TEST_IMAGE_PATHS = ['/home/tamvm/Downloads/test_face_detect.jpg', '/home/tamvm/Pictures/device-2019-05-07-185923.jpg']
+TEST_IMAGE_PATHS = ['/home/tamvm/Downloads/test_face_detect.jpg', 
+                    '/home/tamvm/Pictures/device-2019-05-07-185923.jpg',
+                    '/home/tamvm/Pictures/test_face_detect_2.jpeg']
 # Size, in inches, of the output images.
 IMAGE_SIZE = (12, 8)
 
@@ -137,7 +139,7 @@ for image_path in TEST_IMAGE_PATHS:
   # Actual detection.
     use_lite_model = True
     if use_lite_model:
-        crop_size = 224
+        crop_size = 112
         image = Image.open(image_path)
         image = image.resize((crop_size, crop_size), Image.ANTIALIAS)
         image_np = load_image_into_numpy_array(image)
